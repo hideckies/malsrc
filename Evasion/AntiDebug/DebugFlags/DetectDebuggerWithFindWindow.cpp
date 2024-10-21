@@ -5,10 +5,9 @@ Resources:
 */
 #include <Windows.h>
 #include <stdio.h>
-#include <vector>
 
 VOID DetectDebuggerWithFindWindow() {
-	std::vector<LPCWSTR> debuggerNames = {
+	LPCWSTR debuggerNames[] = {
 		L"IDA",
 		L"OllyDbg",
 		L"WinDbg",
