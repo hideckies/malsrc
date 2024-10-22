@@ -7,12 +7,18 @@ Resources:
 #include <string>
 #include "APIHashing.hpp"
 
-DWORD StringToHash(CHAR* s) {
+DWORD StringToHashA(CHAR* s) {
 	size_t dwLen = strnlen_s(s, 50);
 	DWORD dwHash = KEY;
 
 	for (size_t i = 0; i < dwLen; i++) {
-		dwHash += (dwHash * RANDOM_ADDR + s[i]) & 0xffffff;
+		CHAR upperS = s[i];
+		// lowercase => uppercase
+		if (upperS >= L'a' && upperS <= L'z') {
+			upperS -= (L'a' - L'A');
+		}
+
+		dwHash += (dwHash * RANDOM_ADDR + upperS) & 0xffffff;
 	}
 
 	return dwHash;
@@ -37,7 +43,7 @@ LPVOID GetProcAddressByHash(CHAR* sLibrary, DWORD dwHash) {
 		DWORD_PTR dwFuncNameVA = (DWORD_PTR)hLibBase + dwFuncNameRVA;
 		CHAR* sFuncName = (CHAR*)dwFuncNameVA;
 
-		DWORD dwFuncHash = StringToHash(sFuncName);
+		DWORD dwFuncHash = StringToHashA(sFuncName);
 		if (dwFuncHash == dwHash) {
 			DWORD_PTR dwFuncAddrRVA = pdwAddrOfFuncsRVA[pwAddrOfNameOrdinalsRVA[i]];
 			return (LPVOID)((DWORD_PTR)hLibBase + dwFuncAddrRVA);

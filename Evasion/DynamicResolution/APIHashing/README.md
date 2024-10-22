@@ -1,5 +1,7 @@
 # API Hashing
 
+This technique dynamatically resolves API addresses using calculated hashes.
+
 ## Usage
 
 ### 1. Calculate API Hashes
@@ -10,10 +12,10 @@ First of all, edit `CalcHashes.ps1` to add/remove APIs and execute it as below:
 .\CalcHashes.ps1
 
 # output
-MessageBoxA = 0x0039a9d2d
+MESSAGEBOXA = 0x006815eed
 ```
 
-### 2. Set KEY, RANDOM_ADDR, API hashes
+### 2. Set KEY, RANDOM_ADDR, API Hashes
 
 In `Helper.hpp`, set `KEY`, `RANDOM_ADDR` and API hashes.
 

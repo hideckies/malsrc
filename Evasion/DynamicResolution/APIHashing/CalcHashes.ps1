@@ -12,7 +12,7 @@ $Key        = 0x48
 $RandomAddr = 0x14da703d
 
 $APIs | % {
-	$api = $_
+	$api = $_.ToUpper()
 
 	$hash = $Key
 	[int]$i = 0
