@@ -24,8 +24,11 @@ BOOL DirectSyscalls() {
 		return FALSE;
 	}
 
+	// --------------------------------------------------------------------------------------- //
+	// The following code is for testing purpose.
+
 	UNICODE_STRING uniFileName;
-	RtlInitUnicodeString(&uniFileName, (PCWSTR)L"\\??\\C:\\Users\\deehi\\AppData\\Local\\Temp\\test.txt");
+	RtlInitUnicodeString(&uniFileName, (PCWSTR)L"\\??\\C:\\test.txt");
 	IO_STATUS_BLOCK isb;
 	ZeroMemory(&isb, sizeof(IO_STATUS_BLOCK));
 	OBJECT_ATTRIBUTES oa;
@@ -49,6 +52,7 @@ BOOL DirectSyscalls() {
 		CloseHandle(hNtdll);
 		return FALSE;
 	}
+	// --------------------------------------------------------------------------------------- //
 
 	CloseHandle(hNtdll);
 	CloseHandle(hFile);

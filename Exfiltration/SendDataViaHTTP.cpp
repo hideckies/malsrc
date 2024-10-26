@@ -17,7 +17,7 @@ VOID FreeAll(HINTERNET hSession, HINTERNET hConnect, HINTERNET hRequest) {
 }
 
 BOOL SendDataViaHTTP() {
-	// ----------------------------------------------------------- //
+	// ----------------------------------------------------------------------------------------------------- //
 	// Replace the following values.
 
 	BOOL bHTTPS = TRUE; // HTTPS or HTTP
@@ -35,7 +35,7 @@ BOOL SendDataViaHTTP() {
 	
 	const char* sData = "data=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"; // Data to send
 	DWORD dwDataLength = (DWORD)strlen(sData);
-	// ----------------------------------------------------------- //
+	// ----------------------------------------------------------------------------------------------------- //
 
 	HINTERNET hSession = WinHttpOpen(
 		lpUserAgent,

@@ -20,7 +20,6 @@ VOID DetectVMWithUsernames() {
 		L"virusclone",
 		// VMWare
 		L"vmware",
-		L"deehi"
 	};
 
 	WCHAR wUsername[BUFFER_SIZE] = { '\0' };

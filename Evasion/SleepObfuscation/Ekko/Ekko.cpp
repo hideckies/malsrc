@@ -7,9 +7,6 @@ Resources:
 #include <stdio.h>
 #include "Ekko.hpp"
 
-_NtContinue ntContinue = nullptr;
-_SystemFunction032 systemFunction032 = nullptr;
-
 VOID FreeAll(HMODULE hNtdll, HMODULE hAdvapi32, HANDLE hEvent, HANDLE hTimerQueue) {
 	if (hNtdll)
 		FreeLibrary(hNtdll);
@@ -34,12 +31,12 @@ VOID EkkoSleep(DWORD dwSleepTime) {
 		FreeAll(hNtdll, hAdvapi32, nullptr, nullptr);
 		return;
 	}
-	ntContinue = reinterpret_cast<_NtContinue>(GetProcAddress(hNtdll, "NtContinue"));
+	_NtContinue ntContinue = reinterpret_cast<_NtContinue>(GetProcAddress(hNtdll, "NtContinue"));
 	if (!ntContinue) {
 		FreeAll(hNtdll, hAdvapi32, nullptr, nullptr);
 		return;
 	}
-	systemFunction032 = reinterpret_cast<_SystemFunction032>(GetProcAddress(hAdvapi32, "SystemFunction032"));
+	_SystemFunction032 systemFunction032 = reinterpret_cast<_SystemFunction032>(GetProcAddress(hAdvapi32, "SystemFunction032"));
 	if (!systemFunction032) {
 		FreeAll(hNtdll, hAdvapi32, nullptr, nullptr);
 		return;
