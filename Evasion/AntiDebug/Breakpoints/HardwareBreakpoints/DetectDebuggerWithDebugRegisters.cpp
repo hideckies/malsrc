@@ -16,7 +16,7 @@ VOID DetectDebuggerWithDebugRegisters() {
 	}
 
 	if (ctx.Dr0 || ctx.Dr1 || ctx.Dr2 || ctx.Dr3) {
-		printf("Debugger found! Exit the process.\n");
+		printf("Hardware breakpoint(s) found! Exit the process.\n");
 		ExitProcess(-1);
 	}
 }
