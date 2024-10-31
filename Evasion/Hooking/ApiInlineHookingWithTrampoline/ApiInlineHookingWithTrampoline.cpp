@@ -1,14 +1,13 @@
 /*
-* Title: Inline Hooking
+* Title: API Inline Hooking with Trampoline
 * Resources:
 *	- https://blog.securehat.co.uk/process-injection/manually-implementing-inline-function-hooking
 *	- https://unprotect.it/technique/inline-hooking/
+* Status: This code crashes (0xc0000005) when invoking the trampolineMessageBoxA in the HookedMessageBoxA. And I have no idea how to fix...
 */
 #include <Windows.h>
-#include <iostream>
-#include <string>
 
-#define HOOK_BYTE_SIZE 13
+#define HOOK_BYTE_SIZE 12
 
 typedef int (WINAPI* _MessageBoxA)(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType);
 
@@ -58,9 +57,8 @@ BOOL Hook() {
 	// Set the original function
 	// -------------------------------------------------------------------------------------------------- //
 
-	// Copy the first N bytes from the target function to our trampoline function.
 	DWORD dwOldProtect;
-	if (!VirtualProtect(targetFuncAddr, HOOK_BYTE_SIZE, PAGE_READWRITE, &dwOldProtect)) {
+	if (!VirtualProtect(targetFuncAddr, HOOK_BYTE_SIZE, PAGE_EXECUTE_READWRITE, &dwOldProtect)) {
 		return FALSE;
 	}
 
@@ -84,24 +82,22 @@ BOOL Unhook() {
 		return FALSE;
 
 	// Restore the original instructions.
-	memcpy(targetFuncAddr, origBytes, sizeof(origBytes));
+	memcpy(targetFuncAddr, origBytes, HOOK_BYTE_SIZE);
 
 	if (!VirtualProtect(targetFuncAddr, HOOK_BYTE_SIZE, dwOldProtect, &dwOldProtect))
 		return FALSE;
 
+	VirtualFree(trampolineAddr, 0, MEM_RELEASE);
+
 	return TRUE;
 }
 
-BOOL InlineHooking() {
+BOOL ApiInlineHookingWithTrampoline() {
 	if (!Hook()) return FALSE;
-
-	MessageBoxA(nullptr, "MessageBoxW called after hooking.", "InlineHooking", MB_OK);
+	MessageBoxA(nullptr, "This text should be replaced after hooking.", "Inline Hooking with Trampoline", MB_OK);
 
 	if (!Unhook()) return FALSE;
-
-	MessageBoxA(nullptr, "MessageBoxW called after unhooking.", "InlineHooking", MB_OK);
-
-	VirtualFree(trampolineAddr, 0, MEM_RELEASE);
+	MessageBoxA(nullptr, "This text should appear after unhooking.", "Inline Hooking with Trampoline", MB_OK);
 
 	return TRUE;
 }
