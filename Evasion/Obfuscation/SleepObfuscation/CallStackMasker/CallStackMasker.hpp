@@ -74,7 +74,9 @@ T readProcessMemory(HANDLE hProcess, LPVOID targetAddress)
 NTSTATUS NormalizeAddress(const HANDLE hProcess, const PVOID pRemoteAddr, PVOID& pLocalAddr, const BOOL bIgnoreExe, const imageMap& imageBaseMap = imageMap());
 NTSTATUS GetModuleBaseNameWrapper(HANDLE hProcess, PVOID pTargetAddr, std::string& moduleName);
 NTSTATUS GetImageBase(const StackFrame& stackFrame);
+NTSTATUS GetThreadStartAddress(const HANDLE hThread, PVOID& pStartAddr);
 BOOL IsThreadAMatch(const HANDLE hProcess, const DWORD pid, const DWORD tid, threadToSpoof& thread);
+BOOL CheckIfAddressIsWithinTargetFunc(const PVOID pTargetAddr, const std::string targetModuleName, const std::string targetFuncName);
 NTSTATUS CalculateReturnAddress(StackFrame& stackFrame);
 NTSTATUS CalculateFunctionStackSize(PRUNTIME_FUNCTION pRuntimeFunc, const DWORD64 dwImageBase, StackFrame& stackFrame);
 NTSTATUS CalculateFunctionStackSizeWrapper(StackFrame& stackFrame);
@@ -84,8 +86,6 @@ NTSTATUS CreateFakeStackInBuffer(const std::vector<StackFrame>& targetCallStack,
 NTSTATUS InitializeSpoofedCallStack(std::vector<StackFrame>& targetCallStack);
 NTSTATUS InitializeStaticCallStackSpoofing(std::vector<StackFrame>& targetCallStack, threadToSpoof& thread);
 NTSTATUS InitializeDynamicCallStackSpoofing(const ULONG waitReason, threadToSpoof& thread);
-NTSTATUS GetThreadStartAddress(const HANDLE hThread, PVOID& pStartAddr);
-BOOL CheckIfAddressIsWithinTargetFunc(const PVOID pTargetAddr, const std::string targetModuleName, const std::string targetFuncName);
 VOID Go();
 BOOL CallStackMasker();
 

@@ -34,7 +34,6 @@ std::string RC4(const std::string& data, const std::string& key) {
 	return result;
 }
 
-// Test function.
 int main() {
 	// Replace the following values.
 	std::string key = "secret";
