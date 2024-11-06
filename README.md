@@ -1,6 +1,6 @@
 # A Collection of Red Team Techniques
 
-A collection of source code for red teamers. Most of the source code is not original, based on the original author's code.  
+A collection of techniques and source code for red teamers. Most of the source code is not original, based on the original author's code.  
 This repository is also my experiment.  
 
 ## Disclaimer
