@@ -35,12 +35,12 @@ unsigned char CascadeStubx64[] = {
 };
 
 VOID Cleanup(HANDLE hProcess, HANDLE hThread, LPVOID lpRemoteAddr) {
-	if (hProcess)
-		CloseHandle(hProcess);
+	if (lpRemoteAddr)
+		VirtualFreeEx(hProcess, lpRemoteAddr, 0, MEM_RELEASE);
 	if (hThread)
 		CloseHandle(hThread);
-	if (lpRemoteAddr)
-		VirtualFree(lpRemoteAddr, 0, MEM_RELEASE);
+	if (hProcess)
+		CloseHandle(hProcess);
 }
 
 PVOID GetSectionAddr(HMODULE hModule, PCHAR sectionName) {

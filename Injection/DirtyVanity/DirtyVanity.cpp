@@ -31,7 +31,6 @@ BOOL DirtyVanity() {
 	// Reflective shellcode is required. (https://github.com/monoxgas/sRDI)
 	unsigned char shellcode[] = "";
 
-
 	HMODULE hNtdll = LoadLibraryA("ntdll.dll");
 	if (!hNtdll) return FALSE;
 	if (!InitFunctions(hNtdll)) return FALSE;
