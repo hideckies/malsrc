@@ -2,7 +2,7 @@
 * Title: GhostTask
 * Resources:
 *	- https://labs.withsecure.com/publications/scheduled-task-tampering
-*	- https://github.com/netero1010/GhostTask/blob/main/GhostTask.c
+*	- https://github.com/netero1010/GhostTask
 */
 #include <Windows.h>
 #include <stdio.h>

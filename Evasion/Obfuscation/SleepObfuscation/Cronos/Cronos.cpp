@@ -9,7 +9,6 @@ Resources:
 #include "Cronos.hpp"
 
 VOID FreeAll(
-	HMODULE hNtdll,
 	HMODULE hAdvapi32,
 	HANDLE hProtectionRWTimer,
 	HANDLE hEncryptionTime,
@@ -17,8 +16,6 @@ VOID FreeAll(
 	HANDLE hProtectionRWXTimer,
 	HANDLE hThreadTimer
 ) {
-	if (hNtdll)
-		FreeLibrary(hNtdll);
 	if (hAdvapi32)
 		FreeLibrary(hAdvapi32);
 	if (hProtectionRWTimer)
@@ -108,16 +105,17 @@ VOID CronosSleep(int sleepTime) {
 	HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
 	HMODULE hAdvapi32 = LoadLibraryA("advapi32.dll");
 	if (!hNtdll || !hAdvapi32) {
+		FreeAll(hAdvapi32, nullptr, nullptr, nullptr, nullptr, nullptr);
 		return;
 	}
 	_NtContinue ntContinue = reinterpret_cast<_NtContinue>(GetProcAddress(hNtdll, "NtContinue"));
 	if (!ntContinue) {
-		FreeAll(hNtdll, hAdvapi32, nullptr, nullptr, nullptr, nullptr, nullptr);
+		FreeAll(hAdvapi32, nullptr, nullptr, nullptr, nullptr, nullptr);
 		return;
 	}
 	_SystemFunction032 systemFunction032 = reinterpret_cast<_SystemFunction032>(GetProcAddress(hAdvapi32, "SystemFunction032"));
 	if (!systemFunction032) {
-		FreeAll(hNtdll, hAdvapi32, nullptr, nullptr, nullptr, nullptr, nullptr);
+		FreeAll(hAdvapi32, nullptr, nullptr, nullptr, nullptr, nullptr);
 		return;
 	}
 
@@ -135,7 +133,7 @@ VOID CronosSleep(int sleepTime) {
 	HANDLE hProtectionRWXTimer = CreateWaitableTimerW(nullptr, TRUE, L"ProtectionRWXTimer");
 	HANDLE hThreadTimer = CreateWaitableTimerW(nullptr, TRUE, L"ThreadTimer");
 	if (!hProtectionRWTimer || !hEncryptionTimer || !hDecryptionTimer || !hProtectionRWXTimer || !hThreadTimer) {
-		FreeAll(hNtdll, hAdvapi32, hProtectionRWTimer, hEncryptionTimer, hDecryptionTimer, hProtectionRWXTimer, hThreadTimer);
+		FreeAll(hAdvapi32, hProtectionRWTimer, hEncryptionTimer, hDecryptionTimer, hProtectionRWXTimer, hThreadTimer);
 		return;
 	}
 
@@ -158,7 +156,7 @@ VOID CronosSleep(int sleepTime) {
 
 	// Capture apc context.
 	if (!SetWaitableTimer(hThreadTimer, &lgThreadDueTime, 0, (PTIMERAPCROUTINE)RtlCaptureContext, &ctxThread, FALSE)) {
-		FreeAll(hNtdll, hAdvapi32, hProtectionRWTimer, hEncryptionTimer, hDecryptionTimer, hProtectionRWXTimer, hThreadTimer);
+		FreeAll(hAdvapi32, hProtectionRWTimer, hEncryptionTimer, hDecryptionTimer, hProtectionRWXTimer, hThreadTimer);
 		return;
 	}
 	SleepEx(INFINITE, TRUE);
@@ -204,7 +202,7 @@ VOID CronosSleep(int sleepTime) {
 	PVOID pRdxGadget = FindGadget((PBYTE)"\x5a\xc3", (PCHAR)"xx");
 	PVOID pShadowFixGadget = FindGadget((PBYTE)"\x48\x83\xc4\x20\x5f\xc3", (PCHAR)"xxxxxx");
 	if (!pRcxGadget || !pRdxGadget || !pShadowFixGadget) {
-		FreeAll(hNtdll, hAdvapi32, hProtectionRWTimer, hEncryptionTimer, hDecryptionTimer, hProtectionRWXTimer, hThreadTimer);
+		FreeAll(hAdvapi32, hProtectionRWTimer, hEncryptionTimer, hDecryptionTimer, hProtectionRWXTimer, hThreadTimer);
 		return;
 	}
 
@@ -215,14 +213,14 @@ VOID CronosSleep(int sleepTime) {
 		!SetWaitableTimer(hProtectionRWTimer, &lgProtectionRWDueTime, 0, (PTIMERAPCROUTINE)ntContinue, &ctxProtectionRW, FALSE) ||
 		!SetWaitableTimer(hEncryptionTimer, &lgEncryptionDueTime, 0, (PTIMERAPCROUTINE)ntContinue, &ctxEncryption, FALSE)
 	) {
-		FreeAll(hNtdll, hAdvapi32, hProtectionRWTimer, hEncryptionTimer, hDecryptionTimer, hProtectionRWXTimer, hThreadTimer);
+		FreeAll(hAdvapi32, hProtectionRWTimer, hEncryptionTimer, hDecryptionTimer, hProtectionRWXTimer, hThreadTimer);
 		return;
 	}
 
 	// Execute the code.
 	QuadSleep(pRcxGadget, pRdxGadget, pShadowFixGadget, (PVOID)SleepEx);
 
-	FreeAll(hNtdll, hAdvapi32, hProtectionRWTimer, hEncryptionTimer, hDecryptionTimer, hProtectionRWXTimer, hThreadTimer);
+	FreeAll(hAdvapi32, hProtectionRWTimer, hEncryptionTimer, hDecryptionTimer, hProtectionRWXTimer, hThreadTimer);
 	return;
 }
 

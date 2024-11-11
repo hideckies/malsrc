@@ -7,15 +7,19 @@ Resources:
 #include <stdio.h>
 #include "Ekko.hpp"
 
-VOID FreeAll(HMODULE hNtdll, HMODULE hAdvapi32, HANDLE hEvent, HANDLE hTimerQueue) {
-	if (hNtdll)
-		FreeLibrary(hNtdll);
-	if (hAdvapi32)
+VOID FreeAll(HMODULE hAdvapi32, HANDLE hEvent, HANDLE hTimerQueue) {
+	if (hAdvapi32) {
 		FreeLibrary(hAdvapi32);
-	if (hEvent)
+		hAdvapi32 = nullptr;
+	}
+	if (hEvent) {
 		CloseHandle(hEvent);
-	if (hTimerQueue)
+		hEvent = nullptr;
+	}
+	if (hTimerQueue) {
 		CloseHandle(hTimerQueue);
+		hTimerQueue = nullptr;
+	}
 }
 
 VOID EkkoSleep(DWORD dwSleepTime) {
@@ -25,20 +29,21 @@ VOID EkkoSleep(DWORD dwSleepTime) {
 	PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)((DWORD_PTR)hImageBase + pDosHeader->e_lfanew);
 	DWORD dwImageSize = pNtHeaders->OptionalHeader.SizeOfImage;
 
+	// Resolve function addresses.
 	HMODULE hNtdll = GetModuleHandleA("ntdll");
 	HMODULE hAdvapi32 = LoadLibraryA("advapi32");
 	if (!hNtdll || !hAdvapi32) {
-		FreeAll(hNtdll, hAdvapi32, nullptr, nullptr);
+		FreeAll(hAdvapi32, nullptr, nullptr);
 		return;
 	}
 	_NtContinue ntContinue = reinterpret_cast<_NtContinue>(GetProcAddress(hNtdll, "NtContinue"));
 	if (!ntContinue) {
-		FreeAll(hNtdll, hAdvapi32, nullptr, nullptr);
+		FreeAll(hAdvapi32, nullptr, nullptr);
 		return;
 	}
 	_SystemFunction032 systemFunction032 = reinterpret_cast<_SystemFunction032>(GetProcAddress(hAdvapi32, "SystemFunction032"));
 	if (!systemFunction032) {
-		FreeAll(hNtdll, hAdvapi32, nullptr, nullptr);
+		FreeAll(hAdvapi32, nullptr, nullptr);
 		return;
 	}
 
@@ -53,12 +58,12 @@ VOID EkkoSleep(DWORD dwSleepTime) {
 
 	HANDLE hEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 	if (!hEvent) {
-		FreeAll(hNtdll, hAdvapi32, nullptr, nullptr);
+		FreeAll(hAdvapi32, nullptr, nullptr);
 		return;
 	}
 	HANDLE hTimerQueue = CreateTimerQueue();
 	if (!hTimerQueue) {
-		FreeAll(hNtdll, hAdvapi32, hEvent, nullptr);
+		FreeAll(hAdvapi32, hEvent, nullptr);
 		return;
 	}
 
@@ -135,7 +140,7 @@ VOID EkkoSleep(DWORD dwSleepTime) {
 
 	DeleteTimerQueue(hTimerQueue);
 
-	FreeAll(hNtdll, hAdvapi32, hEvent, hTimerQueue);
+	FreeAll(hAdvapi32, hEvent, hTimerQueue);
 }
 
 BOOL Ekko() {

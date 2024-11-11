@@ -2,7 +2,7 @@
 * Title: DeathSleep
 * Resources:
 *	- https://github.com/janoglezcampos/DeathSleep
-* Status: This may not work on Windows 11at the line `((void(*)(PCONTEXT, BOOLEAN))ntContinue)((PCONTEXT)lpParam, FALSE);` in the "awake" function
+* Status: This may not work on Windows 11 at the line `((void(*)(PCONTEXT, BOOLEAN))ntContinue)((PCONTEXT)lpParam, FALSE);` in the "awake" function
 *		  in my experience, and I have no idea for this reason yet.
 */
 #include <Windows.h>

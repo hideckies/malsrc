@@ -1,3 +1,8 @@
+/*
+ * Resources:
+ *  - https://github.com/CCob/ThreadlessInject/blob/master/ThreadlessInject/Program.cs
+ */
+
 using System;
 using System.Diagnostics;
 using System.IO;
