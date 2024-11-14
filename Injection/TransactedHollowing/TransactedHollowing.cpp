@@ -2,6 +2,8 @@
 Title: Transacted Hollowing
 Resources:
 	- https://github.com/hasherezade/transacted_hollowing
+Notes:
+	- This source code is not completed because I faced error as follow.
 Status: This technique no longer works on Windows 11. The error (0xc0000005) occurs when invoking the NtCreateSection function.
 */
 #include <Windows.h>
@@ -12,15 +14,6 @@ Status: This technique no longer works on Windows 11. The error (0xc0000005) occ
 #pragma comment(lib, "ktmw32.lib")
 
 _NtCreateSection ntCreateSection = nullptr;
-
-VOID FreeAll(HMODULE hNtdll, BYTE* payloadBuf, HANDLE hSection) {
-	if (hNtdll)
-		FreeLibrary(hNtdll);
-	if (payloadBuf)
-		VirtualFree(payloadBuf, 0, MEM_RELEASE);
-	if (hSection)
-		CloseHandle(hSection);
-}
 
 BOOL InitFunctions(HMODULE hNtdll) {
 	ntCreateSection = reinterpret_cast<_NtCreateSection>(GetProcAddress(hNtdll, "NtCreateSection"));
@@ -161,13 +154,11 @@ BOOL TransactedHollowing() {
 	DWORD dwPayloadSize = 0;
 	BYTE* payloadBuf = MapPayload(wPayloadPath, &dwPayloadSize);
 	if (!payloadBuf) return FALSE;
-	
+
 	HANDLE hSection = MakeTransactedSection(payloadBuf, dwPayloadSize);
 	if (!hSection) return FALSE;
 
 	// TODO: Implement the remaining code.
-
-	FreeAll(payloadBuf, hSection);
 
 	return TRUE;
 }

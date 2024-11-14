@@ -265,7 +265,6 @@ BOOL WriteRemoteProcessParameters(HANDLE hProcess, const std::wstring wImagePath
 	);
 	if (!lpRemoteAddr) return FALSE;
 
-	// 
 	if (params->Environment) {
 		params->Environment = Add2Ptr(lpRemoteAddr, params->Length);
 	}

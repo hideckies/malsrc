@@ -12,10 +12,10 @@ _RtlCreateProcessReflection rtlCreateProcessReflection = nullptr;
 VOID FreeAll(HMODULE hNtdll, HANDLE hProcess, LPVOID lpBaseAddr) {
 	if (hNtdll)
 		FreeLibrary(hNtdll);
+	if (lpBaseAddr)
+		VirtualFree(hProcess, lpBaseAddr, 0, MEM_RELEASE);
 	if (hProcess)
 		CloseHandle(hProcess);
-	if (lpBaseAddr)
-		VirtualFree(lpBaseAddr, 0, MEM_RELEASE);
 }
 
 BOOL InitFunctions(HMODULE hNtdll) {

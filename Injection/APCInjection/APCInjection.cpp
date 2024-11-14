@@ -68,8 +68,8 @@ BOOL APCInjection() {
 	}
 	if (!WriteProcessMemory(hProcess, lpApcFunc, shellcode, sizeof(shellcode), nullptr)) {
 		CloseHandle(hSnapshot);
+		VirtualFreeEx(hProcess, lpApcFunc, 0, MEM_RELEASE);
 		CloseHandle(hProcess);
-		VirtualFree(lpApcFunc, 0, MEM_RELEASE);
 		return FALSE;
 	}
 
@@ -95,7 +95,6 @@ BOOL APCInjection() {
 
 	CloseHandle(hSnapshot);
 	CloseHandle(hProcess);
-	VirtualFree(lpApcFunc, 0, MEM_RELEASE);
 
 	return TRUE;
 }

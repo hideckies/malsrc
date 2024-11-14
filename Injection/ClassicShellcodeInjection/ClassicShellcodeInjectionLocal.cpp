@@ -42,7 +42,5 @@ BOOL ClassicShellcodeInjectionLocal() {
 
 	((void(*)())lpExec)();
 
-	VirtualFree(lpExec, 0, MEM_RELEASE);
-
 	return TRUE;
 }

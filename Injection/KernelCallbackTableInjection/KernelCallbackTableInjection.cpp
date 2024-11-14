@@ -6,7 +6,8 @@
 #include <Windows.h>
 #include <stdio.h>
 #include "Nt.hpp"
-#include "KernelCallbackTableInjection.hpp"
+
+#define MAX_WAIT_TIME 10000
 
 VOID Cleanup(HANDLE hProcess, HANDLE hThread, HANDLE hProcess2, LPVOID lpRemoteBuffer, LPVOID lpNewCCC) {
 	if (lpRemoteBuffer)
@@ -249,7 +250,7 @@ BOOL KernelCallbackTableInjection() {
 	cds.dwData = 1;
 	cds.cbData = (lstrlenW(msg) + 1) * sizeof(WCHAR);
 	cds.lpData = msg;
-	
+
 	LRESULT result = SendMessage(hWindow, WM_COPYDATA, (WPARAM)hWindow, (LPARAM)&cds);
 	if (result == 0 && GetLastError() != 0) {
 		return FALSE;

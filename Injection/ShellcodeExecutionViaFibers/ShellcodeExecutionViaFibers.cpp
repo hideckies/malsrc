@@ -46,7 +46,5 @@ BOOL ShellcodeExecutionViaFibers() {
 	// Schedule the fiber to execute our function.
 	SwitchToFiber(lpFiber2);
 
-	VirtualFree(lpBuffer, 0, MEM_RELEASE);
-
 	return TRUE;
 }

@@ -62,8 +62,8 @@ VOID ReallocateSections(
     LPVOID lpBaseRelocDir,
     PIMAGE_NT_HEADERS pNtHeaders
 );
-DLLEXPORT ULONG_PTR caller(VOID);
-DLLEXPORT ULONG_PTR WINAPI ReflectiveLoader(LPVOID lpParameter);
+extern "C" DLLEXPORT ULONG_PTR caller(VOID);
+extern "C" DLLEXPORT ULONG_PTR WINAPI ReflectiveLoader(LPVOID lpParameter);
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved);
 
 #endif // REFLECTIVE_DLL_HPP

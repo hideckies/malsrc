@@ -2,6 +2,7 @@
 * Title: DLL Notification Injection
 * Resources:
 *	- https://github.com/Dec0ne/DllNotificationInjection
+* Warning: I'm not sure but the payload is executed only when I manually operate the target process application e.g. I move NotePad window with cursor.
 */
 #include <Windows.h>
 #include <stdio.h>

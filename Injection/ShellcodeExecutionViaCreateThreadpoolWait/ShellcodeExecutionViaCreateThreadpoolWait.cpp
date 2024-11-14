@@ -57,7 +57,6 @@ BOOL ShellcodeExecutionViaCreateThreadpoolWait() {
 	WaitForSingleObject(hEvent, INFINITE);
 
 	CloseHandle(hEvent);
-	VirtualFree(lpAddr, 0, MEM_RELEASE);
 
 	return TRUE;
 }

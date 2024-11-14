@@ -63,7 +63,5 @@ int main() {
 
     ((void(*)())lpExec)();
 
-    VirtualFree(lpExec, 0, MEM_RELEASE);
-
 	return 0;
 }

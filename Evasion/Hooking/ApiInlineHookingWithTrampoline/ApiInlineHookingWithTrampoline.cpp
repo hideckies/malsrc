@@ -6,6 +6,7 @@
 * Status: This code crashes (0xc0000005) when invoking the trampolineMessageBoxA in the HookedMessageBoxA. And I have no idea how to fix...
 */
 #include <Windows.h>
+#include <stdio.h>
 
 #define HOOK_BYTE_SIZE 12
 
