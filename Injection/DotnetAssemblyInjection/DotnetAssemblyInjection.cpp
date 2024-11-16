@@ -37,8 +37,3 @@ BOOL DotnetAssemblyInjection() {
 
 	return TRUE;
 }
-
-int main() {
-	DotnetAssemblyInjection();
-	return 0;
-}

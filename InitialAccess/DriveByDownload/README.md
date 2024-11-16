@@ -7,10 +7,10 @@ This technique lets victims to download malicious files when they access to the 
 ### 1. Generate JavaScript File
 
 First of all, generate `downloader.js` that lets victims to download our arbitrary file. This JavaScript file will be loaded in the HTML.    
-As below, specify the path of the file to download:
+As below, specify the path of the file that you want victims to download:
 
 ```sh
-python3 scripts/generator.py path/to/file
+python3 scripts/generator.py ./evil.exe
 ```
 
 ### 2. Start Web Server

