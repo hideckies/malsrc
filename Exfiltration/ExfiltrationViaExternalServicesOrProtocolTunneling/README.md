@@ -3,6 +3,7 @@
 Online platforms are also used for exfiltrating data instead of an attacker-owned C2 server for preventing detection.  
 The following platforms are often used for this purpose:
 
+- [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
 - Discord
 - GitHub
 - [localhost.run](https://localhost.run/)

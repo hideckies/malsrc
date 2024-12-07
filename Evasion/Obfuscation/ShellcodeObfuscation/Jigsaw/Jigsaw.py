@@ -39,7 +39,7 @@ def main():
         jigsaw.append(shellcode[pos])
 
     # Output jigsaw
-    print(f"unsigned char jigsaw[] = ")
+    print("unsigned char jigsaw[] = ")
     print("\t\"", end="")
     for i in range(len(jigsaw)):
         if i % 12 == 0 and i != 0:
@@ -49,7 +49,7 @@ def main():
     print()
 
     # Output positions
-    print(f"int positions[] = {{")
+    print("int positions[] = {")
     print("\t", end="")
     for i in range(len(positions)):
         if i % 12 == 0 and i != 0:
