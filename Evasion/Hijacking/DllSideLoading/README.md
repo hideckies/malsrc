@@ -18,3 +18,7 @@
 ## Usefule Tools
 
 We can find vulnerable EXEs/DLLs using [HijackLibs](https://hijacklibs.net/).
+
+## Resources
+
+- [Exploring DLL Hijacking](https://unit42.paloaltonetworks.com/dll-hijacking-techniques/)
