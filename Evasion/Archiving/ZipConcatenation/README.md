@@ -31,13 +31,11 @@ When we try to display the `combined.zip` with the following ZIP readers/handler
 
     The `combined.zip` cannot be extracted.
 
-
 See resources for more details.
 
 ## (Optional) How to Extract
 
 By the way, this combined ZIP file can be extracted with the following method.  
-
 At first, display the ZIP information with `zipinfo` command to see the number of bytes to split:
 
 ```sh
