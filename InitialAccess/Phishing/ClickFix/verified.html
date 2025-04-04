@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>You are verified!</title>
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.0/css/all.css">
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background-color: #f9f9f9;
+            }
+
+            ol {
+                padding-left: 12px;
+            }
+
+            ol li {
+                margin: 12px 0;
+            }
+
+            #container {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .recaptcha-container {
+                width: 300px;
+                border: 1px solid #d3d3d3;
+                border-radius: 3px;
+                background-color: #f9f9f9;
+                box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+                position: relative;
+            }
+            
+            .recaptcha-body {
+                position: relative;
+                padding: 16px 16px 24px 16px;
+            }
+            
+            .recaptcha-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .checkbox-container {
+                display: flex;
+                align-items: center;
+            }
+            
+            .checkbox {
+                margin-right: 12px;
+                width: 24px;
+                height: 24px;
+                position: relative;
+            }
+            
+            .checkbox-label {
+                font-size: 14px;
+            }
+            
+            .recaptcha-logo {
+                display: flex;
+                align-items: center;
+            }
+            
+            .recaptcha-logo img {
+                width: 42px;
+            }
+            
+            .privacy-terms {
+                position: absolute;
+                bottom: 6px;
+                right: 12px;
+                font-size: 10px;
+                color: #555;
+            }
+            
+            .privacy-terms a {
+                color: #555;
+                text-decoration: none;
+            }
+            
+            .privacy-terms a:hover {
+                text-decoration: underline;
+            }
+            
+            .message {
+                margin-top: 24px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="container">
+            <div class="recaptcha-container">
+                <div class="recaptcha-body">
+                    <div class="recaptcha-row">
+                        <div class="checkbox-container">
+                            <div class="checkbox">
+                                <i class="fas fa-check fa-lg" style="color: #63E6BE"></i>
+                            </div>
+                            <div class="checkbox-label">You are verified!</div>
+                        </div>
+                        <div class="recaptcha-logo">
+                            <img src="/recaptcha-logo.png" alt="reCAPTCHA logo">
+                        </div>
+                    </div>
+                </div>
+                <div class="privacy-terms">
+                    <a href="#">Privacy</a> - <a href="#">Terms</a>
+                </div>
+            </div>
+            <div class="message">
+                <p>You can close the previous reCAPTCHA page tab.</p>
+            </div>
+        </div>
+    </body>
+</html>

