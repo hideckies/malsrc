@@ -1,6 +1,6 @@
-# Anonymized Environment
+# Tor through VPN
 
-We need to make our computers redundant for things like OSINT for security research and dark web research. Although it is difficult to completely conceal our identity, here are some ways we can strengthen our privacy to some extent at home.
+We need to make our computers redundant for things like OSINT for security research and dark web research. Although it is difficult to completely conceal our identity, here are some ways we can strengthen our privacy to some extent at home with Tor over VPN.
 
 ## Setup
 
@@ -8,7 +8,7 @@ We need to make our computers redundant for things like OSINT for security resea
 
 When we use Whonix, the setup may be easier than other OSs. Follow the steps:
 
-1. Start VPN on host machine for Tor over VPN.
+1. Start VPN on host machine for Tor through VPN.
 2. Start Whonix Gateway and Workstation in VirtualBox.
 3. Use Whonix Workstation.
 
@@ -18,7 +18,7 @@ Thanks to Whonix Gateway, all internet connections are made through Tor by defau
 
 Using Kali/Parrot through Whonix Gateway provides a more robust internet connection.
 
-1. Start VPN on host machine for Tor over VPN.
+1. Start VPN on host machine for Tor through VPN.
 2. In VirtualBox, select Kali/Parrot and go to `Settings` -> `Network` -> `Adapter 1` and set the following:
 
     ```txt
@@ -51,7 +51,7 @@ Using Kali/Parrot through Whonix Gateway provides a more robust internet connect
 
 Although this method provides less privacy than the above two methods, it will still provide sufficient anonymity in most cases.
 
-1. Start VPN on host machine for Tor over VPN.
+1. Start VPN on host machine for Tor through VPN.
 2. Start Kali/Parrot in VirtualBox or VMWare or other VM.
 3. In guest machine, start Tor with `sudo apt install tor && sudo systemctl start tor` command.
 4. (optional) Make Tor start at system startup with `sudo systemctl enable tor` command.
