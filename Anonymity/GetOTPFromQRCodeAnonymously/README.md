@@ -1,4 +1,4 @@
-# Get OTP (One-Time Password) Anonymously
+# Get OTP (One-Time Password) from QR Code Anonymously
 
 Sometimes we need to scan a QR code to get an OTP for login or MFA in web services. At that time, scanning it with our regular mobile Authenticator app is not a good idea for those of us who value anonymity.  
 Therefore, we can obtain the OTP almost anonymously using the commands below.
