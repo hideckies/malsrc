@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8"> <!-- UTF-8 must be set for this technique to work -->
+    <title>Hello, World!</title>
+</head>
+<body>
+    <h1>Hello, World!</h1>
+    <script>
+        // Replace the value with your obfuscated payload here.
+        const obfsPayload = 'ﾠﾠﾠﾠㅤﾠㅤﾠﾠㅤㅤﾠﾠﾠﾠㅤﾠㅤㅤﾠㅤㅤﾠﾠﾠㅤㅤﾠﾠㅤﾠㅤﾠㅤㅤㅤﾠﾠㅤﾠﾠㅤㅤㅤﾠㅤﾠﾠﾠﾠㅤﾠㅤﾠﾠﾠﾠﾠㅤﾠﾠﾠㅤﾠﾠㅤﾠﾠㅤﾠﾠㅤﾠﾠㅤﾠﾠﾠﾠﾠﾠㅤㅤﾠﾠﾠﾠㅤﾠㅤㅤﾠㅤㅤﾠㅤﾠﾠㅤﾠﾠﾠﾠﾠﾠㅤㅤㅤﾠㅤㅤﾠﾠㅤㅤﾠㅤﾠﾠㅤﾠㅤㅤㅤﾠﾠㅤㅤﾠㅤㅤﾠㅤﾠﾠㅤﾠㅤㅤﾠﾠﾠㅤﾠﾠㅤㅤﾠㅤㅤﾠﾠﾠㅤㅤﾠﾠㅤﾠㅤﾠﾠㅤﾠﾠﾠﾠﾠﾠㅤㅤﾠㅤㅤㅤﾠﾠㅤㅤﾠㅤㅤㅤㅤﾠㅤㅤㅤﾠㅤㅤㅤﾠﾠㅤﾠㅤㅤㅤﾠﾠﾠㅤﾠﾠﾠㅤﾠﾠﾠㅤﾠㅤﾠﾠㅤﾠﾠㅤㅤㅤﾠㅤㅤﾠﾠﾠﾠㅤﾠㅤﾠ';
+
+        function decode(obfsString) {
+            const binaryString = Array.from(obfsString)
+                .map(char => +('ﾠ' > char))
+                .join('');
+            return binaryString.match(/.{8}/g)
+                .map(byte => String.fromCharCode(parseInt(byte, 2)))
+                .join('');
+        }
+
+        const payload = decode(obfsPayload.toString());
+        eval(payload);
+    </script>
+    <!-- CREDIT: https://urlscan.io/result/0195c73f-bfd0-7000-8386-94b11ace6088/dom/ -->
+</body>

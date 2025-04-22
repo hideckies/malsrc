@@ -1,4 +1,4 @@
-# Tor through VPN
+# Tor over VPN
 
 We need to make our computers redundant for things like OSINT for security research and dark web research. Although it is difficult to completely conceal our identity, here are some ways we can strengthen our privacy to some extent at home with Tor over VPN.
 
@@ -16,7 +16,7 @@ Thanks to Whonix Gateway, all internet connections are made through Tor by defau
 
 ### Option 2. Kali/Parrot through Whonix Gateway on VM
 
-Using Kali/Parrot through Whonix Gateway provides a more robust internet connection.
+Using Kali/Parrot through Whonix Gateway provides robust internet connections.
 
 1. Start VPN on host machine for Tor through VPN.
 2. In VirtualBox, select Kali/Parrot and go to `Settings` -> `Network` -> `Adapter 1` and set the following:
@@ -70,6 +70,6 @@ Or use **Tor Browser**.
 
 After setting up the environment, we need to check if our IP have been changed from the original IP.
 
-1. Check public IP with `curl ifconfig.me` or `nyx` commands.
-2. Also check `https://check.torproject.org/` and `https://ipleak.net/`.
+1. Check public IP with `curl ifconfig.me`. If you use the Whonix, run the `nyx` commands in Whonix Gateway for monitoring networks.
+2. Also check `https://check.torproject.org/`, `https://ipleak.net/` and `https://dnsleaktest.com/`.
 3. Also check the internet route with `traceroute google.com` commands out of curiosity.
