@@ -13,7 +13,7 @@ Then run the following command:
 python3 obfuscator.py
 ```
 
-Copy the entire result containing `const obfsPayload = '...';`.  
+Copy the entire result containing `const obfsPayload = '          ';`.  
 And then open `index.html` and Paste it to replace the variable named `obfsPayload` with yours.
 
 ### 2. Start Local Server
